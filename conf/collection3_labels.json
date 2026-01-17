@@ -1,0 +1,8 @@
+{
+    "dataset": "collection3",
+    "labels": [
+        "LOC",
+        "PER",
+        "ORG"
+    ]
+}

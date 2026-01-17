@@ -1,0 +1,12 @@
+{
+  "total_sec": 22.604,
+  "model_loading_sec": 11.836,
+  "inference_per_doc_total_sec": 10.688,
+  "inference_per_doc_avg_sec": 0.1149,
+  "inference_per_doc_min_sec": 0.0381,
+  "inference_per_doc_max_sec": 2.3023,
+  "inference_per_doc_count": 93,
+  "metrics_calculation_sec": 0.003,
+  "num_documents": 93,
+  "throughput_docs_per_sec": 8.7
+}

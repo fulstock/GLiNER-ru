@@ -1,0 +1,23 @@
+{
+    "base_model": "urchade/gliner_multi-v2.1",
+    "max_steps": 10000,
+    "batch_size": 8,
+    "learning_rate": 1e-5,
+    "others_lr": 5e-5,
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01,
+    "save_steps": 1000,
+    "eval_steps": 500,
+    "logging_steps": 100,
+    "save_total_limit": 3,
+    "focal_loss_alpha": 0.75,
+    "focal_loss_gamma": 0.0,
+    "negatives": 1.0,
+    "seed": 42,
+    "data": {
+        "train": "/mnt/s/HRCode/data/NEREL-gliner/train.json",
+        "dev": "/mnt/s/HRCode/data/NEREL-gliner/dev.json",
+        "test": "/mnt/s/HRCode/data/NEREL-gliner/test.json"
+    },
+    "output_dir": "./models/gliner-nerel"
+}

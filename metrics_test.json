@@ -1,0 +1,285 @@
+{
+  "micro": {
+    "precision": 0.8072,
+    "recall": 0.2386,
+    "f1": 0.3683,
+    "tp": 1365,
+    "fp": 326,
+    "fn": 4357
+  },
+  "macro": {
+    "precision": 0.6098,
+    "recall": 0.1819,
+    "f1": 0.2461
+  },
+  "per_class": {
+    "AGE": {
+      "tp": 29,
+      "fp": 4,
+      "fn": 108,
+      "precision": 0.8788,
+      "recall": 0.2117,
+      "f1": 0.3412,
+      "support": 137
+    },
+    "AWARD": {
+      "tp": 38,
+      "fp": 14,
+      "fn": 80,
+      "precision": 0.7308,
+      "recall": 0.322,
+      "f1": 0.4471,
+      "support": 118
+    },
+    "CITY": {
+      "tp": 109,
+      "fp": 9,
+      "fn": 129,
+      "precision": 0.9237,
+      "recall": 0.458,
+      "f1": 0.6124,
+      "support": 238
+    },
+    "COUNTRY": {
+      "tp": 214,
+      "fp": 15,
+      "fn": 229,
+      "precision": 0.9345,
+      "recall": 0.4831,
+      "f1": 0.6369,
+      "support": 443
+    },
+    "CRIME": {
+      "tp": 6,
+      "fp": 4,
+      "fn": 29,
+      "precision": 0.6,
+      "recall": 0.1714,
+      "f1": 0.2667,
+      "support": 35
+    },
+    "DATE": {
+      "tp": 55,
+      "fp": 40,
+      "fn": 457,
+      "precision": 0.5789,
+      "recall": 0.1074,
+      "f1": 0.1812,
+      "support": 512
+    },
+    "DISEASE": {
+      "tp": 18,
+      "fp": 0,
+      "fn": 39,
+      "precision": 1.0,
+      "recall": 0.3158,
+      "f1": 0.48,
+      "support": 57
+    },
+    "DISTRICT": {
+      "tp": 2,
+      "fp": 1,
+      "fn": 23,
+      "precision": 0.6667,
+      "recall": 0.08,
+      "f1": 0.1429,
+      "support": 25
+    },
+    "EVENT": {
+      "tp": 17,
+      "fp": 2,
+      "fn": 652,
+      "precision": 0.8947,
+      "recall": 0.0254,
+      "f1": 0.0494,
+      "support": 669
+    },
+    "FACILITY": {
+      "tp": 0,
+      "fp": 7,
+      "fn": 64,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 64
+    },
+    "FAMILY": {
+      "tp": 1,
+      "fp": 8,
+      "fn": 13,
+      "precision": 0.1111,
+      "recall": 0.0714,
+      "f1": 0.087,
+      "support": 14
+    },
+    "IDEOLOGY": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 42,
+      "precision": 1.0,
+      "recall": 0.0233,
+      "f1": 0.0455,
+      "support": 43
+    },
+    "LANGUAGE": {
+      "tp": 2,
+      "fp": 5,
+      "fn": 6,
+      "precision": 0.2857,
+      "recall": 0.25,
+      "f1": 0.2667,
+      "support": 8
+    },
+    "LAW": {
+      "tp": 6,
+      "fp": 3,
+      "fn": 55,
+      "precision": 0.6667,
+      "recall": 0.0984,
+      "f1": 0.1714,
+      "support": 61
+    },
+    "LOCATION": {
+      "tp": 1,
+      "fp": 66,
+      "fn": 60,
+      "precision": 0.0149,
+      "recall": 0.0164,
+      "f1": 0.0156,
+      "support": 61
+    },
+    "MONEY": {
+      "tp": 27,
+      "fp": 20,
+      "fn": 16,
+      "precision": 0.5745,
+      "recall": 0.6279,
+      "f1": 0.6,
+      "support": 43
+    },
+    "NATIONALITY": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 60,
+      "precision": 1.0,
+      "recall": 0.0323,
+      "f1": 0.0625,
+      "support": 62
+    },
+    "NUMBER": {
+      "tp": 3,
+      "fp": 15,
+      "fn": 218,
+      "precision": 0.1667,
+      "recall": 0.0136,
+      "f1": 0.0251,
+      "support": 221
+    },
+    "ORDINAL": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 107,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 107
+    },
+    "ORGANIZATION": {
+      "tp": 238,
+      "fp": 36,
+      "fn": 434,
+      "precision": 0.8686,
+      "recall": 0.3542,
+      "f1": 0.5032,
+      "support": 672
+    },
+    "PERCENT": {
+      "tp": 2,
+      "fp": 4,
+      "fn": 5,
+      "precision": 0.3333,
+      "recall": 0.2857,
+      "f1": 0.3077,
+      "support": 7
+    },
+    "PERSON": {
+      "tp": 541,
+      "fp": 41,
+      "fn": 402,
+      "precision": 0.9296,
+      "recall": 0.5737,
+      "f1": 0.7095,
+      "support": 943
+    },
+    "PENALTY": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 16,
+      "precision": 1.0,
+      "recall": 0.0588,
+      "f1": 0.1111,
+      "support": 17
+    },
+    "PRODUCT": {
+      "tp": 3,
+      "fp": 7,
+      "fn": 50,
+      "precision": 0.3,
+      "recall": 0.0566,
+      "f1": 0.0952,
+      "support": 53
+    },
+    "PROFESSION": {
+      "tp": 5,
+      "fp": 0,
+      "fn": 831,
+      "precision": 1.0,
+      "recall": 0.006,
+      "f1": 0.0119,
+      "support": 836
+    },
+    "RELIGION": {
+      "tp": 6,
+      "fp": 4,
+      "fn": 18,
+      "precision": 0.6,
+      "recall": 0.25,
+      "f1": 0.3529,
+      "support": 24
+    },
+    "STATE_OR_PROVINCE": {
+      "tp": 14,
+      "fp": 5,
+      "fn": 98,
+      "precision": 0.7368,
+      "recall": 0.125,
+      "f1": 0.2137,
+      "support": 112
+    },
+    "TIME": {
+      "tp": 0,
+      "fp": 13,
+      "fn": 47,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 47
+    },
+    "WORK_OF_ART": {
+      "tp": 24,
+      "fp": 3,
+      "fn": 69,
+      "precision": 0.8889,
+      "recall": 0.2581,
+      "f1": 0.4,
+      "support": 93
+    }
+  },
+  "summary": {
+    "num_documents": 93,
+    "gold_entities": 5810,
+    "predicted_entities": 1714,
+    "model": "urchade/gliner_multi-v2.1",
+    "threshold": 0.5
+  }
+}
