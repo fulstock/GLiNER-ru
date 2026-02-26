@@ -8,11 +8,44 @@ extraction models.
 
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
+import os
 import numpy as np
 import torch
-import onnxruntime as ort
+
+# Suppress ONNX Runtime GPU discovery warnings (emitted from C++ to stderr fd)
+def _import_onnxruntime_quietly():
+    """Import onnxruntime while suppressing GPU discovery warnings."""
+    import sys
+    try:
+        stderr_fd = sys.stderr.fileno()
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        saved_stderr_fd = os.dup(stderr_fd)
+        os.dup2(devnull_fd, stderr_fd)
+        os.close(devnull_fd)
+        try:
+            import onnxruntime as _ort
+            _ort.set_default_logger_severity(3)
+            return _ort
+        except ImportError:
+            return None
+        finally:
+            os.dup2(saved_stderr_fd, stderr_fd)
+            os.close(saved_stderr_fd)
+    except (OSError, AttributeError):
+        try:
+            import onnxruntime as _ort
+            _ort.set_default_logger_severity(3)
+            return _ort
+        except ImportError:
+            return None
+
+ort = _import_onnxruntime_quietly()
+
+# For type hints when ort might be None at runtime
+if TYPE_CHECKING:
+    import onnxruntime as ort
 
 from ..modeling.outputs import GLiNERBaseOutput, GLiNERRelexOutput
 
@@ -30,7 +63,7 @@ class BaseORTModel(ABC):
         output_names: Dictionary mapping output names to their indices.
     """
 
-    def __init__(self, session: ort.InferenceSession):
+    def __init__(self, session: "ort.InferenceSession"):
         """Initialize the ONNX Runtime model.
 
         Args:

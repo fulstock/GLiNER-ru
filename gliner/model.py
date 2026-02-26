@@ -8,7 +8,42 @@ from typing import Any, Dict, List, Tuple, Union, Optional
 from pathlib import Path
 
 import torch
-import onnxruntime as ort
+
+# Suppress ONNX Runtime GPU discovery warnings (occurs on systems without GPU driver access)
+# The warning is emitted from C++ directly to stderr fd, so we redirect at OS level
+def _import_onnxruntime_quietly():
+    """Import onnxruntime while suppressing GPU discovery warnings."""
+    import sys
+
+    try:
+        # Redirect stderr at file descriptor level to catch C++ warnings
+        stderr_fd = sys.stderr.fileno()
+        devnull_fd = os.open(os.devnull, os.O_WRONLY)
+        saved_stderr_fd = os.dup(stderr_fd)
+        os.dup2(devnull_fd, stderr_fd)
+        os.close(devnull_fd)
+
+        try:
+            import onnxruntime as _ort
+            _ort.set_default_logger_severity(3)  # 3 = ERROR
+            return _ort
+        except ImportError:
+            return None
+        finally:
+            # Restore stderr
+            os.dup2(saved_stderr_fd, stderr_fd)
+            os.close(saved_stderr_fd)
+    except (OSError, AttributeError):
+        # Fallback if fd manipulation fails (e.g., no fileno)
+        try:
+            import onnxruntime as _ort
+            _ort.set_default_logger_severity(3)
+            return _ort
+        except ImportError:
+            return None
+
+ort = _import_onnxruntime_quietly()
+
 from tqdm import tqdm
 from torch import nn
 from safetensors import safe_open
@@ -43,7 +78,6 @@ from .decoding import (
     SpanGenerativeDecoder,
     TokenGenerativeDecoder,
 )
-from .training import Trainer, TrainingArguments
 from .evaluation import BaseNEREvaluator, BaseRelexEvaluator
 from .onnx.model import (
     BaseORTModel,
@@ -90,12 +124,8 @@ from .data_processing.collator import (
 )
 from .data_processing.tokenizer import WordsSplitter
 
-if is_module_available("onnxruntime"):
-    import onnxruntime as ort
-
-    ONNX_AVAILABLE = True
-else:
-    ONNX_AVAILABLE = False
+# ONNX availability is determined by the import at module top
+ONNX_AVAILABLE = ort is not None
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +181,7 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
 
         self._keys_to_ignore_on_save = None
         self._inference_packing_config: Optional[InferencePackingConfig] = None
+        self._cached_inference_collator = None  # Cached collator for inference
 
     @abstractmethod
     def _create_model(self, config, backbone_from_pretrained, cache_dir, **kwargs):
@@ -1007,7 +1038,7 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
         dataloader_num_workers: int = 1,
         report_to: str = "none",
         **kwargs,
-    ) -> TrainingArguments:
+    ) -> "TrainingArguments":
         """Create training arguments with sensible defaults.
 
         Args:
@@ -1040,6 +1071,7 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
         Returns:
             TrainingArguments instance.
         """
+        from .training import TrainingArguments
         return TrainingArguments(
             output_dir=output_dir,
             learning_rate=learning_rate,
@@ -1072,12 +1104,12 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
         self,
         train_dataset,
         eval_dataset,
-        training_args: Optional[TrainingArguments] = None,
+        training_args: Optional["TrainingArguments"] = None,
         freeze_components: Optional[list[str]] = None,
         compile_model: bool = False,
         output_dir: Optional[Union[str, Path]] = None,
         **training_kwargs,
-    ) -> Trainer:
+    ) -> "Trainer":
         """Train the model.
 
         Args:
@@ -1092,6 +1124,8 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
         Returns:
             Trained Trainer instance.
         """
+        from .training import Trainer
+
         # Create training arguments if not provided
         if training_args is None:
             if output_dir is None:
@@ -1282,14 +1316,17 @@ class BaseEncoderGLiNER(BaseGLiNER):
 
         input_x = self.prepare_base_input(tokens)
 
-        collator = self.data_collator_class(
-            self.config,
-            data_processor=self.data_processor,
-            return_tokens=True,
-            return_entities=True,
-            return_id_to_classes=True,
-            prepare_labels=False,
-        )
+        # Use cached collator to avoid repeated initialization
+        if self._cached_inference_collator is None:
+            self._cached_inference_collator = self.data_collator_class(
+                self.config,
+                data_processor=self.data_processor,
+                return_tokens=True,
+                return_entities=True,
+                return_id_to_classes=True,
+                prepare_labels=False,
+            )
+        collator = self._cached_inference_collator
 
         def collate_fn(batch, entity_types=entity_types):
             batch_out = collator(batch, entity_types=entity_types)

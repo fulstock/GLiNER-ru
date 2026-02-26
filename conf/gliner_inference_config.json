@@ -1,0 +1,53 @@
+{
+  "_comment": "Example GLiNERInference config file for folder-based initialization",
+  "_schema_version": "1.0",
+
+  "model_path": ".",
+  "threshold": 0.5,
+  "flat_ner": true,
+  "device": "auto",
+
+  "labels": [
+    "AGE",
+    "AWARD",
+    "CITY",
+    "COUNTRY",
+    "CRIME",
+    "DATE",
+    "DISEASE",
+    "DISTRICT",
+    "EVENT",
+    "FACILITY",
+    "FAMILY",
+    "IDEOLOGY",
+    "LANGUAGE",
+    "LAW",
+    "LOCATION",
+    "MONEY",
+    "NATIONALITY",
+    "NUMBER",
+    "ORDINAL",
+    "ORGANIZATION",
+    "PERCENT",
+    "PERSON",
+    "PENALTY",
+    "PRODUCT",
+    "PROFESSION",
+    "RELIGION",
+    "STATE_OR_PROVINCE",
+    "TIME",
+    "WORK_OF_ART"
+  ],
+
+  "_usage_notes": {
+    "model_path_options": [
+      "\".\" - Use model files from this folder (offline mode)",
+      "\"urchade/gliner_multi-v2.1\" - HuggingFace model ID (online)",
+      "\"/absolute/path/to/model\" - Absolute path to model folder"
+    ],
+    "labels_options": [
+      "Inline array as shown above",
+      "Or use \"labels_file\": \"labels.json\" to reference a separate file"
+    ]
+  }
+}

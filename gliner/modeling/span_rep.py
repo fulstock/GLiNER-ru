@@ -142,9 +142,10 @@ class SpanCAT(nn.Module):
 
         B, L, D = h.size()
 
-        h = h.view(B, L, 1, D).repeat(1, 1, self.max_width, 1)
+        # Use expand instead of repeat to avoid memory copies (returns view)
+        h = h.view(B, L, 1, D).expand(-1, -1, self.max_width, -1)
 
-        q = self.query_seg.view(1, 1, self.max_width, -1).repeat(B, L, 1, 1)
+        q = self.query_seg.view(1, 1, self.max_width, -1).expand(B, L, -1, -1)
 
         span_rep = torch.cat([h, q], dim=-1)
 
@@ -272,17 +273,31 @@ class SpanEndpointsBlock(nn.Module):
 
     Attributes:
         kernel_size (int): The span width (kernel size).
+        _max_cached_len (int): Maximum sequence length for cached span indices.
     """
 
-    def __init__(self, kernel_size):
+    # Default max sequence length for cached span indices
+    _DEFAULT_MAX_LEN = 2048
+
+    def __init__(self, kernel_size, max_length: int = None):
         """Initialize the SpanEndpointsBlock.
 
         Args:
             kernel_size (int): The span width to extract endpoints for.
+            max_length (int): Maximum sequence length for span index caching.
+                Defaults to 2048.
         """
         super().__init__()
 
         self.kernel_size = kernel_size
+        self._max_cached_len = max_length or self._DEFAULT_MAX_LEN
+
+        # Pre-compute span indices for max_length and register as buffer
+        # This avoids repeated tensor creation on each forward pass
+        span_idx = torch.LongTensor(
+            [[i, i + self.kernel_size - 1] for i in range(self._max_cached_len)]
+        )
+        self.register_buffer('_cached_span_idx', span_idx, persistent=False)
 
     def forward(self, x):
         """Extract start and end representations for all spans.
@@ -295,7 +310,14 @@ class SpanEndpointsBlock(nn.Module):
         """
         B, L, D = x.size()
 
-        span_idx = torch.LongTensor([[i, i + self.kernel_size - 1] for i in range(L)]).to(x.device)
+        # Use cached span indices, extending if needed
+        if L <= self._max_cached_len:
+            span_idx = self._cached_span_idx[:L]
+        else:
+            # Fallback for sequences longer than cache (rare case)
+            span_idx = torch.LongTensor(
+                [[i, i + self.kernel_size - 1] for i in range(L)]
+            ).to(x.device)
 
         x = F.pad(x, (0, 0, 0, self.kernel_size - 1), "constant", 0)
 
