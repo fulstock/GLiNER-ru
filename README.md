@@ -1,155 +1,131 @@
-> [!IMPORTANT]
-> **🚀 GLiNER2 is Now Available from [Fastino Labs](https://github.com/fastino-ai)!** A unified multi-task model for NER, Text Classification & Structured Data Extraction. Check out [fastino-ai/GLiNER2 →](https://github.com/fastino-ai/GLiNER2)
+# GLiNER NEREL: Russian NER with GLiNER
 
-# 👑 GLiNER: Generalist and Lightweight Model for Named Entity Recognition
+Fork of [urchade/GLiNER](https://github.com/urchade/GLiNER) fine-tuned on the [NEREL](https://github.com/nerel-ds/NEREL) dataset for Russian named entity recognition (29 entity types).
 
----
+## Models
 
-<div align="center">
-    <div>
-        <a href="https://clickpy.clickhouse.com/dashboard/gliner"><img src="https://static.pepy.tech/badge/gliner" alt="GLiNER Downloads"></a>
-        <a href="https://arxiv.org/abs/2311.08526"><img src="https://img.shields.io/badge/arXiv-2311.08526-b31b1b.svg" alt="GLiNER Paper"></a>
-        <a href="https://discord.gg/Y2yVxpSQnG"><img alt="GLiNER Discord" src="https://img.shields.io/discord/1089800235347353640?logo=discord&logoColor=white&label=Discord&color=blue"></a>
-        <a href="https://github.com/urchade/GLiNER"><img alt="GLiNER GitHub stars" src="https://img.shields.io/github/stars/urchade/GLiNER?style=social"></a>
-        <a href="https://github.com/urchade/GLiNER/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/urchade/GLiNER?color=blue"></a>
-        <br>
-        <a href="https://colab.research.google.com/drive/1mhalKWzmfSTqMnR0wQBZvt9-ktTsATHB?usp=sharing"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open GLiNER In Colab"></a>
-        <a href="https://huggingface.co/spaces/urchade/gliner_mediumv2.1"><img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-sm.svg" alt="Open GLiNER In HF Spaces"></a>
-        <a href="https://huggingface.co/models?library=gliner&sort=trending"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-yellow" alt="HuggingFace Models"></a>
-    </div>
-    <br>
-</div>
+| Model | Description |
+|-------|-------------|
+| [fulstock/gliner-nerel-finetuned](https://huggingface.co/fulstock/gliner-nerel-finetuned) | Fine-tuned on NEREL (746 train / 94 val), 100k steps |
+| [urchade/gliner_multi-v2.1](https://huggingface.co/urchade/gliner_multi-v2.1) | Base model (upstream, multilingual) |
 
-GLiNER is a framework for training and deploying Named Entity Recognition (NER) models that can identify any entity type using bidirectional transformer encoders (BERT-like). Beyond standard NER, GLiNER supports multiple tasks including joint entity and relation extraction through specialized architectures. It provides a practical alternative to both traditional NER models, which are limited to predefined entity types, and Large Language Models (LLMs), which offer flexibility but require significant computational resources.
+## Quick Start
 
+### Install
 
-## Example Notebooks
-
-Explore various examples including finetuning, ONNX conversion, and synthetic data generation. 
-
-- [Example Notebooks](https://github.com/urchade/GLiNER/tree/main/examples)
-- Finetune on Colab &nbsp;[<img align="center" src="https://colab.research.google.com/assets/colab-badge.svg" />](https://colab.research.google.com/drive/1HNKd74cmfS9tGvWrKeIjSxBt01QQS7bq?usp=sharing)
-## 🛠 Installation & Usage
-
-### Installation
 ```bash
-!pip install gliner
+pip install -e .
 ```
 
-### Usage
-After the installation of the GLiNER library, import the `GLiNER` class. Following this, you can load your chosen model with `GLiNER.from_pretrained` and utilize `predict_entities` to discern entities within your text.
+### Inference
 
 ```python
 from gliner import GLiNER
 
-# Initialize GLiNER with the base model
-model = GLiNER.from_pretrained("urchade/gliner_medium-v2.1")
-
-# Sample text for entity prediction
-text = """
-Cristiano Ronaldo dos Santos Aveiro (Portuguese pronunciation: [kɾiʃˈtjɐnu ʁɔˈnaldu]; born 5 February 1985) is a Portuguese professional footballer who plays as a forward for and captains both Saudi Pro League club Al Nassr and the Portugal national team. Widely regarded as one of the greatest players of all time, Ronaldo has won five Ballon d'Or awards,[note 3] a record three UEFA Men's Player of the Year Awards, and four European Golden Shoes, the most by a European player. He has won 33 trophies in his career, including seven league titles, five UEFA Champions Leagues, the UEFA European Championship and the UEFA Nations League. Ronaldo holds the records for most appearances (183), goals (140) and assists (42) in the Champions League, goals in the European Championship (14), international goals (128) and international appearances (205). He is one of the few players to have made over 1,200 professional career appearances, the most by an outfield player, and has scored over 850 official senior career goals for club and country, making him the top goalscorer of all time.
-"""
-
-# Labels for entity prediction
-# Most GLiNER models should work best when entity types are in lower case or title case
-labels = ["Person", "Award", "Date", "Competitions", "Teams"]
-
-# Perform entity prediction
-entities = model.predict_entities(text, labels, threshold=0.5)
-
-# Display predicted entities and their labels
-for entity in entities:
-    print(entity["text"], "=>", entity["label"])
+model = GLiNER.from_pretrained("fulstock/gliner-nerel-finetuned")
+entities = model.predict_entities(
+    "Иван Иванов посетил Москву 5 января 2024 года.",
+    ["PERSON", "CITY", "DATE"],
+    threshold=0.5,
+)
+for e in entities:
+    print(e["text"], "=>", e["label"])
 ```
 
-#### Expected Output
+### Inference with sliding window (long texts)
 
-```
-Cristiano Ronaldo dos Santos Aveiro => person
-5 February 1985 => date
-Al Nassr => teams
-Portugal national team => teams
-Ballon d'Or => award
-UEFA Men's Player of the Year Awards => award
-European Golden Shoes => award
-UEFA Champions Leagues => competitions
-UEFA European Championship => competitions
-UEFA Nations League => competitions
-European Championship => competitions
-```
+For texts that exceed the model's token limit, `GLiNERInference` automatically splits into overlapping windows and merges results:
 
-## 👨‍💻 Model Authors
-GLiNER was originally developed by:
-* [Urchade Zaratiana](urchade.github.io)
-* Nadi Tomeh
-* Pierre Holat
-* Thierry Charnois
+```python
+from gliner_inference import GLiNERInference
 
-## 🌟 Maintainers
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <strong>Urchade Zaratiana</strong><br>
-        <em>Member of technical staff at Fastino</em><br>
-        <a href="https://www.linkedin.com/in/urchade-zaratiana-36ba9814b/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
-      </td>
-      <td align="center">
-        <strong>Ihor Stepanov</strong><br>
-        <em>Co-Founder at Knowledgator</em><br>
-        <a href="https://www.linkedin.com/in/ihor-knowledgator/"><img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" /></a>
-      </td>
-    </tr>
-  </table>
-</div>
-
-
-## 📚 Citations
-
-If you find GLiNER useful in your research, please consider citing our papers:
-
-```bibtex
-@inproceedings{zaratiana-etal-2024-gliner,
-    title = "{GL}i{NER}: Generalist Model for Named Entity Recognition using Bidirectional Transformer",
-    author = "Zaratiana, Urchade  and
-      Tomeh, Nadi  and
-      Holat, Pierre  and
-      Charnois, Thierry",
-    editor = "Duh, Kevin  and
-      Gomez, Helena  and
-      Bethard, Steven",
-    booktitle = "Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers)",
-    month = jun,
-    year = "2024",
-    address = "Mexico City, Mexico",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2024.naacl-long.300",
-    doi = "10.18653/v1/2024.naacl-long.300",
-    pages = "5364--5376",
-    abstract = "Named Entity Recognition (NER) is essential in various Natural Language Processing (NLP) applications. Traditional NER models are effective but limited to a set of predefined entity types. In contrast, Large Language Models (LLMs) can extract arbitrary entities through natural language instructions, offering greater flexibility. However, their size and cost, particularly for those accessed via APIs like ChatGPT, make them impractical in resource-limited scenarios. In this paper, we introduce a compact NER model trained to identify any type of entity. Leveraging a bidirectional transformer encoder, our model, GLiNER, facilitates parallel entity extraction, an advantage over the slow sequential token generation of LLMs. Through comprehensive testing, GLiNER demonstrate strong performance, outperforming both ChatGPT and fine-tuned LLMs in zero-shot evaluations on various NER benchmarks.",
-}
+inference = GLiNERInference(
+    model_path="fulstock/gliner-nerel-finetuned",
+    max_tokens=384,      # words per window
+    stride_tokens=128,   # overlap between windows
+)
+entities = inference.predict(long_text)
+# Returns: [(start_char, end_char, entity_type, entity_text), ...]
 ```
 
-```bibtex
-@misc{stepanov2024glinermultitaskgeneralistlightweight,
-      title={GLiNER multi-task: Generalist Lightweight Model for Various Information Extraction Tasks}, 
-      author={Ihor Stepanov and Mykhailo Shtopko},
-      year={2024},
-      eprint={2406.12925},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2406.12925}, 
-}
+Batch inference collects all windows from all texts into a single batch:
+
+```python
+results = inference.predict_batch(["text1", "text2", "text3"])
 ```
-## Support and funding
 
-This project has been supported and funded by **F.initiatives** and **Laboratoire Informatique de Paris Nord**.
+## Entity Types
 
-F.initiatives has been an expert in public funding strategies for R&D, Innovation, and Investments (R&D&I) for over 20 years. With a team of more than 200 qualified consultants, F.initiatives guides its clients at every stage of developing their public funding strategy: from structuring their projects to submitting their aid application, while ensuring the translation of their industrial and technological challenges to public funders. Through its continuous commitment to excellence and integrity, F.initiatives relies on the synergy between methods and tools to offer tailored, high-quality, and secure support.
+The 29 NEREL entity types (configured in `conf/nerel_labels.json`):
 
-<p align="center">
-  <img src="logo/FI_COMPLET_CW.png" alt="FI Group" width="300"/>
-</p>
+AGE, AWARD, CITY, COUNTRY, CRIME, DATE, DISEASE, DISTRICT, EVENT, FACILITY, FAMILY, IDEOLOGY, LANGUAGE, LAW, LOCATION, MONEY, NATIONALITY, NUMBER, ORDINAL, ORGANIZATION, PERCENT, PERSON, PENALTY, PRODUCT, PROFESSION, RELIGION, STATE\_OR\_PROVINCE, TIME, WORK\_OF\_ART
 
-We also extend our heartfelt gratitude to the open-source community for their invaluable contributions, which have been instrumental in the success of this project.
+## Reproducing the Fine-tuned Model
+
+### 1. Prepare data
+
+Convert NEREL BRAT annotations to GLiNER JSON format:
+
+```bash
+python brat_to_gliner.py \
+    --brat_path /path/to/NEREL1.1 \
+    --output_path /path/to/output \
+    --labels_path ./conf/nerel_labels.json
+```
+
+This produces `train.json`, `dev.json`, `test.json` with the GLiNER format:
+```json
+{"tokenized_text": ["word1", "word2", "..."], "ner": [[0, 2, "PERSON"], ...]}
+```
+
+### 2. Train
+
+```bash
+python train_gliner.py \
+    --train_data /path/to/train.json \
+    --val_data /path/to/dev.json \
+    --output_dir ./saved_ckpt/nerel-finetuned \
+    --base_model urchade/gliner_multi-v2.1 \
+    --max_steps 100000 \
+    --batch_size 16 \
+    --learning_rate 1e-5 \
+    --others_lr 5e-5 \
+    --focal_loss_alpha 0.75 \
+    --focal_loss_gamma 0.0
+```
+
+See `conf/train_config.json` for the full set of hyperparameters used.
+
+### 3. Evaluate
+
+```bash
+python gliner_inference.py \
+    --input /path/to/test.json \
+    --model ./saved_ckpt/nerel-finetuned \
+    --metrics_output metrics.json \
+    --measure_time --timing_output timing.json
+```
+
+Compare multiple models on BRAT-format test data:
+
+```bash
+python gliner_inference.py --compare \
+    --brat_folder /path/to/test \
+    --models urchade/gliner_multi-v2.1 ./saved_ckpt/nerel-finetuned \
+    --names "Pretrained" "Finetuned"
+```
+
+## Repository Structure
+
+| File | Purpose |
+|------|---------|
+| `gliner_inference.py` | Inference wrapper with sliding window, batch support, evaluation CLI |
+| `train_gliner.py` | Fine-tuning script |
+| `brat_to_gliner.py` | BRAT annotation format to GLiNER JSON converter |
+| `metrics_to_csv.py` | Convert evaluation metrics JSON to CSV |
+| `conf/` | Label configs and training/inference config templates |
+| `gliner/` | GLiNER library (forked from upstream) |
+
+## Credits
+
+GLiNER was originally developed by Urchade Zaratiana, Nadi Tomeh, Pierre Holat, and Thierry Charnois. See the [original repository](https://github.com/urchade/GLiNER) and [paper](https://arxiv.org/abs/2311.08526).
