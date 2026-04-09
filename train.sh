@@ -3,9 +3,9 @@ python3.10 train_gliner.py \
       --val_data /home/student1/data/NEREL-2part-merged-gliner/dev_w384.json \
       --output_dir ./models/gliner-nerel-2part-windowed-finetuned \
       --base_model urchade/gliner_multi-v2.1 \
-      --max_steps 250 \
-      --batch_size 4 \
-      --gradient_accumulation_steps 4 \
+      --max_steps 3000 \
+      --batch_size 8 \
+      --gradient_accumulation_steps 2 \
       --learning_rate 1e-5 \
       --save_steps 250 \
       --eval_steps 250 \
