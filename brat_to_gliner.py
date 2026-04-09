@@ -14,11 +14,18 @@ GLiNER format:
         "ner": [[start_idx, end_idx, "ENTITY_TYPE"], ...]  # token indices, inclusive
     }
 
-Usage:
+Usage (split subdirectories):
     python brat_to_gliner.py \
         --brat_path /path/to/NEREL1.1 \
         --output_path /path/to/output \
         --labels_path ./conf/nerel_labels.json
+
+Usage (single flat directory):
+    python brat_to_gliner.py \
+        --brat_path /path/to/annotations \
+        --output_path /path/to/output \
+        --labels_path ./conf/nerel_labels.json \
+        --flat --output_name train
 """
 
 import json
@@ -200,14 +207,75 @@ def convert_document(
     }
 
 
+def convert_brat_directory(
+    dir_path: str,
+    tags: List[str],
+    ru_tokenizer,
+    word_tokenizer,
+    desc: str = "Converting",
+) -> Tuple[List[Dict[str, Any]], int, int]:
+    """
+    Convert all BRAT documents in a single directory to GLiNER format.
+
+    Returns:
+        (documents, entity_count, skipped)
+    """
+    # Find all annotation files
+    ann_files = []
+    for root, dirs, files in os.walk(dir_path):
+        for f in files:
+            if f.endswith('.ann'):
+                ann_files.append(os.path.join(root, f))
+
+    documents = []
+    entity_count = 0
+    skipped = 0
+
+    for ann_path in tqdm(ann_files, desc=desc):
+        txt_path = ann_path[:-4] + '.txt'
+
+        if not os.path.exists(txt_path):
+            skipped += 1
+            continue
+
+        # Skip empty files
+        if os.path.getsize(ann_path) == 0:
+            skipped += 1
+            continue
+
+        try:
+            doc = convert_document(txt_path, ann_path, tags, ru_tokenizer, word_tokenizer)
+            if doc:
+                documents.append(doc)
+                entity_count += len(doc["ner"])
+            else:
+                skipped += 1
+        except Exception as e:
+            print(f"Error processing {ann_path}: {e}")
+            skipped += 1
+
+    return documents, entity_count, skipped
+
+
 def convert_dataset(
     brat_path: str,
     output_path: str,
     labels_path: str,
-    splits: List[str] = ["train", "dev", "test"]
+    splits: List[str] = ["train", "dev", "test"],
+    flat: bool = False,
+    output_name: str = "data",
 ):
     """
     Convert BRAT dataset to GLiNER format.
+
+    Args:
+        brat_path: Path to BRAT dataset. With splits: parent dir containing
+            train/dev/test subdirs. With --flat: directory containing .ann/.txt files.
+        output_path: Directory for output JSON files.
+        labels_path: Path to labels JSON file.
+        splits: Dataset splits to convert (ignored in flat mode).
+        flat: If True, treat brat_path as a single directory of .ann/.txt files.
+        output_name: Output filename (without .json) when using flat mode.
     """
     # Load labels
     with open(labels_path, 'r', encoding='UTF-8') as f:
@@ -222,52 +290,13 @@ def convert_dataset(
     # Create output directory
     os.makedirs(output_path, exist_ok=True)
 
-    for split in splits:
-        split_path = os.path.join(brat_path, split)
+    if flat:
+        print(f"\nProcessing directory: {brat_path}")
+        documents, entity_count, skipped = convert_brat_directory(
+            brat_path, tags, ru_tokenizer, word_tokenizer, desc="Converting"
+        )
 
-        if not os.path.exists(split_path):
-            print(f"Warning: Split '{split}' not found at {split_path}, skipping...")
-            continue
-
-        print(f"\nProcessing {split} split...")
-
-        # Find all annotation files
-        ann_files = []
-        for root, dirs, files in os.walk(split_path):
-            for f in files:
-                if f.endswith('.ann'):
-                    ann_files.append(os.path.join(root, f))
-
-        # Convert documents
-        documents = []
-        entity_count = 0
-        skipped = 0
-
-        for ann_path in tqdm(ann_files, desc=f"Converting {split}"):
-            txt_path = ann_path[:-4] + '.txt'
-
-            if not os.path.exists(txt_path):
-                skipped += 1
-                continue
-
-            # Skip empty files
-            if os.path.getsize(ann_path) == 0:
-                skipped += 1
-                continue
-
-            try:
-                doc = convert_document(txt_path, ann_path, tags, ru_tokenizer, word_tokenizer)
-                if doc:
-                    documents.append(doc)
-                    entity_count += len(doc["ner"])
-                else:
-                    skipped += 1
-            except Exception as e:
-                print(f"Error processing {ann_path}: {e}")
-                skipped += 1
-
-        # Write output
-        output_file = os.path.join(output_path, f"{split}.json")
+        output_file = os.path.join(output_path, f"{output_name}.json")
         with open(output_file, 'w', encoding='UTF-8') as f:
             json.dump(documents, f, ensure_ascii=False, indent=2)
 
@@ -275,6 +304,27 @@ def convert_dataset(
         print(f"  Entities: {entity_count}")
         print(f"  Skipped: {skipped}")
         print(f"  Output: {output_file}")
+    else:
+        for split in splits:
+            split_path = os.path.join(brat_path, split)
+
+            if not os.path.exists(split_path):
+                print(f"Warning: Split '{split}' not found at {split_path}, skipping...")
+                continue
+
+            print(f"\nProcessing {split} split...")
+            documents, entity_count, skipped = convert_brat_directory(
+                split_path, tags, ru_tokenizer, word_tokenizer, desc=f"Converting {split}"
+            )
+
+            output_file = os.path.join(output_path, f"{split}.json")
+            with open(output_file, 'w', encoding='UTF-8') as f:
+                json.dump(documents, f, ensure_ascii=False, indent=2)
+
+            print(f"  Documents: {len(documents)}")
+            print(f"  Entities: {entity_count}")
+            print(f"  Skipped: {skipped}")
+            print(f"  Output: {output_file}")
 
 
 def main():
@@ -285,13 +335,13 @@ def main():
         '--brat_path',
         type=str,
         required=True,
-        help="Path to BRAT dataset (with train, dev, test subdirs)"
+        help="Path to BRAT dataset (parent with split subdirs, or single dir with --flat)"
     )
     parser.add_argument(
         '--output_path',
         type=str,
         required=True,
-        help="Path for GLiNER format output"
+        help="Directory for GLiNER format output"
     )
     parser.add_argument(
         '--labels_path',
@@ -304,7 +354,18 @@ def main():
         type=str,
         nargs='+',
         default=['train', 'dev', 'test'],
-        help="Dataset splits to convert"
+        help="Dataset splits to convert (ignored with --flat)"
+    )
+    parser.add_argument(
+        '--flat',
+        action='store_true',
+        help="Treat brat_path as a single directory of .ann/.txt files (no split subdirs)"
+    )
+    parser.add_argument(
+        '--output_name',
+        type=str,
+        default='data',
+        help="Output filename without extension, used with --flat (default: data)"
     )
 
     args = parser.parse_args()
@@ -313,7 +374,9 @@ def main():
         brat_path=args.brat_path,
         output_path=args.output_path,
         labels_path=args.labels_path,
-        splits=args.splits
+        splits=args.splits,
+        flat=args.flat,
+        output_name=args.output_name,
     )
 
     print("\nConversion complete!")
