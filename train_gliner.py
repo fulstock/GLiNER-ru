@@ -21,6 +21,7 @@ from typing import List, Dict, Any, Optional
 
 import torch
 from gliner import GLiNER
+from transformers import EarlyStoppingCallback
 
 
 def load_dataset(path: str) -> List[Dict[str, Any]]:
@@ -54,6 +55,7 @@ def train_gliner(
     base_model: str = "urchade/gliner_multi-v2.1",
     max_steps: int = 10000,
     batch_size: int = 8,
+    gradient_accumulation_steps: int = 1,
     learning_rate: float = 1e-5,
     others_lr: float = 5e-5,
     warmup_ratio: float = 0.1,
@@ -65,6 +67,7 @@ def train_gliner(
     focal_loss_alpha: float = 0.75,
     focal_loss_gamma: float = 0.0,
     negatives: float = 1.0,
+    early_stopping_patience: Optional[int] = None,
     device: str = "auto",
     seed: int = 42
 ):
@@ -78,6 +81,7 @@ def train_gliner(
         base_model: Base GLiNER model to fine-tune
         max_steps: Maximum training steps
         batch_size: Training batch size
+        gradient_accumulation_steps: Number of steps to accumulate gradients before updating
         learning_rate: Encoder learning rate
         others_lr: Learning rate for other components
         warmup_ratio: Warmup ratio for learning rate scheduler
@@ -89,6 +93,7 @@ def train_gliner(
         focal_loss_alpha: Focal loss alpha parameter
         focal_loss_gamma: Focal loss gamma parameter
         negatives: Negative sampling ratio
+        early_stopping_patience: Stop after N evals without improvement (None to disable)
         device: Device to train on
         seed: Random seed
     """
@@ -122,14 +127,38 @@ def train_gliner(
     print("\nStarting training...")
     print(f"  Max steps: {max_steps}")
     print(f"  Batch size: {batch_size}")
+    if gradient_accumulation_steps > 1:
+        print(f"  Gradient accumulation steps: {gradient_accumulation_steps}")
+        print(f"  Effective batch size: {batch_size * gradient_accumulation_steps}")
     print(f"  Learning rate: {learning_rate}")
+    if early_stopping_patience is not None:
+        print(f"  Early stopping patience: {early_stopping_patience}")
     print(f"  Output dir: {output_dir}")
+
+    # Build callbacks
+    callbacks = []
+    if early_stopping_patience is not None:
+        if val_data is None:
+            print("Warning: --early_stopping_patience requires validation data, ignoring")
+        else:
+            callbacks.append(EarlyStoppingCallback(early_stopping_patience=early_stopping_patience))
+
+    # Early stopping requires eval_strategy and load_best_model_at_end
+    use_early_stopping = bool(callbacks) and val_data is not None
+    eval_kwargs = {}
+    if val_data is not None:
+        eval_kwargs["eval_steps"] = eval_steps
+        eval_kwargs["eval_strategy"] = "steps"
+    if use_early_stopping:
+        eval_kwargs["load_best_model_at_end"] = True
+        eval_kwargs["metric_for_best_model"] = "eval_loss"
 
     try:
         trainer = model.train_model(
             train_dataset=train_data,
             eval_dataset=val_data,
             output_dir=output_dir,
+            callbacks=callbacks or None,
 
             # Training schedule
             max_steps=max_steps,
@@ -139,6 +168,7 @@ def train_gliner(
             # Batch & optimization
             per_device_train_batch_size=batch_size,
             per_device_eval_batch_size=batch_size,
+            gradient_accumulation_steps=gradient_accumulation_steps,
             learning_rate=learning_rate,
             others_lr=others_lr,
             weight_decay=weight_decay,
@@ -153,9 +183,9 @@ def train_gliner(
 
             # Logging & saving
             save_steps=save_steps,
-            eval_steps=eval_steps if val_data else None,
             logging_steps=logging_steps,
             save_total_limit=save_total_limit,
+            **eval_kwargs,
 
             # Misc
             seed=seed,
@@ -171,6 +201,7 @@ def train_gliner(
             "base_model": base_model,
             "max_steps": max_steps,
             "batch_size": batch_size,
+            "gradient_accumulation_steps": gradient_accumulation_steps,
             "learning_rate": learning_rate,
             "others_lr": others_lr,
             "warmup_ratio": warmup_ratio,
@@ -178,6 +209,7 @@ def train_gliner(
             "focal_loss_alpha": focal_loss_alpha,
             "focal_loss_gamma": focal_loss_gamma,
             "negatives": negatives,
+            "early_stopping_patience": early_stopping_patience,
             "train_data": train_data_path,
             "val_data": val_data_path,
             "train_examples": len(train_data),
@@ -243,6 +275,12 @@ def main():
         type=int,
         default=8,
         help="Training batch size"
+    )
+    parser.add_argument(
+        '--gradient_accumulation_steps',
+        type=int,
+        default=1,
+        help="Number of steps to accumulate gradients before updating"
     )
     parser.add_argument(
         '--learning_rate',
@@ -315,6 +353,14 @@ def main():
         help="Negative sampling ratio"
     )
 
+    # Early stopping
+    parser.add_argument(
+        '--early_stopping_patience',
+        type=int,
+        default=None,
+        help="Stop after N evals without improvement (requires --val_data)"
+    )
+
     # Misc
     parser.add_argument(
         '--device',
@@ -338,6 +384,7 @@ def main():
         base_model=args.base_model,
         max_steps=args.max_steps,
         batch_size=args.batch_size,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
         others_lr=args.others_lr,
         warmup_ratio=args.warmup_ratio,
@@ -349,6 +396,7 @@ def main():
         focal_loss_alpha=args.focal_loss_alpha,
         focal_loss_gamma=args.focal_loss_gamma,
         negatives=args.negatives,
+        early_stopping_patience=args.early_stopping_patience,
         device=args.device,
         seed=args.seed
     )

@@ -1108,6 +1108,7 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
         freeze_components: Optional[list[str]] = None,
         compile_model: bool = False,
         output_dir: Optional[Union[str, Path]] = None,
+        callbacks: Optional[list] = None,
         **training_kwargs,
     ) -> "Trainer":
         """Train the model.
@@ -1119,6 +1120,7 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
             freeze_components: List of component names to freeze (e.g., ['text_encoder', 'decoder']).
             compile_model: Whether to compile model with torch.compile.
             output_dir: Output directory (required if training_args is None).
+            callbacks: Optional list of HuggingFace TrainerCallback instances.
             **training_kwargs: Additional kwargs for creating training args.
 
         Returns:
@@ -1152,6 +1154,7 @@ class BaseGLiNER(ABC, nn.Module, PyTorchModelHubMixin):
             eval_dataset=eval_dataset,
             tokenizer=self.data_processor.transformer_tokenizer,
             data_collator=data_collator,
+            callbacks=callbacks,
         )
 
         # Train
