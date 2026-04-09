@@ -169,6 +169,44 @@ class Trainer(transformers.Trainer):
         """
         self.model.save_pretrained(output_dir)
 
+    def _load_best_model(self):
+        """Load the best model checkpoint using GLiNER's own loading mechanism.
+
+        Overrides the default HF Trainer implementation which uses standard
+        HF checkpoint loading. GLiNER saves in its own format (pytorch_model.bin
+        + gliner_config.json), so we load the state_dict directly.
+        """
+        from pathlib import Path
+        from safetensors import safe_open
+
+        best_model_path = self.state.best_model_checkpoint
+        if best_model_path is None:
+            logger.warning("No best model checkpoint found, skipping reload.")
+            return
+
+        logger.info("Loading best model from %s (score: %s).", best_model_path, self.state.best_metric)
+
+        model_dir = Path(best_model_path)
+        model_file = model_dir / "model.safetensors"
+        if not model_file.exists():
+            model_file = model_dir / "pytorch_model.bin"
+
+        if not model_file.exists():
+            logger.warning("No model file in %s, falling back to default loading.", best_model_path)
+            return super()._load_best_model()
+
+        device = next(self.model.parameters()).device
+        if model_file.suffix == ".safetensors":
+            state_dict = {}
+            with safe_open(model_file, framework="pt", device=str(device)) as f:
+                for key in f.keys():
+                    state_dict[key] = f.get_tensor(key)
+        else:
+            state_dict = torch.load(model_file, map_location=device)
+
+        self.model.model.load_state_dict(state_dict)
+        logger.info("Best model loaded successfully from %s.", model_file)
+
     def compute_loss(self, model, inputs):
         """Compute loss using custom loss functions.
 
